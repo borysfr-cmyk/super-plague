@@ -9,7 +9,8 @@ const PREFIX = 'superplague.save.';
 const CODE_PREFIX = 'SP1:';
 
 export class LocalSaveProvider {
-  name = 'This device';
+  id = 'local';
+  name = 'To urządzenie';
   isAvailable() {
     try {
       localStorage.setItem(PREFIX + '_test', '1');
@@ -32,7 +33,8 @@ export class LocalSaveProvider {
 }
 
 export class CloudSaveProvider {
-  name = 'Cloud';
+  id = 'cloud';
+  name = 'Chmura';
   isAvailable() { return cloudApi.isReady() && !!cloudApi.currentUser(); }
   save(slot, record) { return cloudApi.cloudSave(slot, record); }
   load(slot) { return cloudApi.cloudLoad(slot); }
@@ -47,7 +49,7 @@ export async function saveGame(state, slot = 'auto') {
   const record = { savedAt: Date.now(), state };
   for (const p of [local, cloud]) {
     if (!p.isAvailable()) continue;
-    try { await p.save(slot, record); results[p.name] = true; } catch (e) { console.warn(e); results[p.name] = false; }
+    try { await p.save(slot, record); results[p.id] = true; } catch (e) { console.warn(e); results[p.id] = false; }
   }
   return results;
 }
@@ -77,10 +79,13 @@ export function exportCode(state) {
 
 export function importCode(code) {
   const clean = code.trim().replace(/\s+/g, '');
-  if (!clean.startsWith(CODE_PREFIX)) throw new Error('This is not a Super Plague save code.');
-  const bin = atob(clean.slice(CODE_PREFIX.length));
-  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
-  const state = JSON.parse(new TextDecoder().decode(bytes));
-  if (state.version !== SAVE_VERSION || !state.regions) throw new Error('This save code is from an incompatible version.');
+  if (!clean.startsWith(CODE_PREFIX)) throw new Error('To nie jest kod zapisu gry Super Plague.');
+  let state;
+  try {
+    const bin = atob(clean.slice(CODE_PREFIX.length));
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    state = JSON.parse(new TextDecoder().decode(bytes));
+  } catch { throw new Error('Ten kod zapisu jest uszkodzony lub niekompletny.'); }
+  if (state.version !== SAVE_VERSION || !state.regions) throw new Error('Ten kod zapisu pochodzi z niezgodnej wersji gry.');
   return state;
 }

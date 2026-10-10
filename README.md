@@ -5,6 +5,7 @@ A browser strategy game in the spirit of Plague Inc, reversed: a rogue AI is spr
 - Runs in any modern browser, no install or build step.
 - Designed for landscape screens, including phones.
 - One playthrough takes about 30 minutes at normal speed. Pause any time.
+- Game text is in Polish.
 
 ## Play
 

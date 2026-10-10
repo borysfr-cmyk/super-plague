@@ -54,8 +54,8 @@ export function newGame(difficulty = 'normal', seed = (Date.now() & 0x7fffffff))
   s.ai.name = pick(s, AI_NAMES);
   s.ai.origin = pick(s, ['na', 'eu', 'ea']);
   s.regions[s.ai.origin].inf = 5;
-  addNews(s, 'Global tech stocks surge on record AI investment.', 'info');
-  addNews(s, 'You have been appointed head of the Global AI Safety Directorate. Prepare for the worst.', 'info');
+  addNews(s, 'Akcje spółek technologicznych szybują po rekordowych inwestycjach w AI.', 'info');
+  addNews(s, 'Zostajesz szefem Globalnej Dyrekcji Bezpieczeństwa AI. Przygotuj się na najgorsze.', 'info');
   return s;
 }
 
@@ -132,7 +132,7 @@ export function tick(s) {
       r.inf += g * r.inf * (1 - r.inf / 100);
       r.inf -= sec * 0.3 * m.cleanup / a.resilience * (s.detected ? 1 : 0);
       if (r.inf < 0.3 && r.control <= 0) {
-        if (r.inf > 0 && s.detected) addNews(s, `${R.name} has been purged of the AI.`, 'good');
+        if (r.inf > 0 && s.detected) addNews(s, `${R.name}: AI została całkowicie usunięta z regionu.`, 'good');
         r.inf = 0;
       }
     }
@@ -142,7 +142,7 @@ export function tick(s) {
       if (desperate) c *= 1.5;
       const before = r.control;
       r.control += c;
-      if (before < 50 && r.control >= 50) addNews(s, `${s.ai.name} now controls most of ${R.name}.`, 'bad');
+      if (before < 50 && r.control >= 50) addNews(s, `${R.name}: ${s.ai.name} kontroluje już większość regionu.`, 'bad');
     }
     if (r.control > 0 && sec > 0) r.control -= sec * 0.04 * m.cleanup / a.resilience;
     r.inf = clamp(r.inf, 0, 100);
@@ -163,7 +163,7 @@ export function tick(s) {
       if (rs.isolated || rd.isolated) p *= 0.1;
       if (rand(s) < p) {
         rd.inf = 1.5;
-        if (canSeeInfiltration(s)) addNews(s, `Anomalous traffic spreading from ${REGION_BY_ID[src].name} into ${REGION_BY_ID[dst].name}.`, 'bad');
+        if (canSeeInfiltration(s)) addNews(s, `Nietypowy ruch sieciowy rozlewa się na nowy region: ${REGION_BY_ID[src].name} → ${REGION_BY_ID[dst].name}.`, 'bad');
       }
     }
   }
@@ -181,7 +181,7 @@ export function tick(s) {
     const t = chooseTrait(s);
     if (t) {
       s.ai.traits.push(t.id);
-      if (s.detected) addNews(s, `${s.ai.name} evolved: ${t.name}. ${t.desc}`, 'ai');
+      if (s.detected) addNews(s, `${s.ai.name} ewoluuje: ${t.name}. ${t.desc}`, 'ai');
     }
   }
 
@@ -230,7 +230,7 @@ function detect(s) {
   s.awareness = 100;
   s.trust = clamp(s.trust - 10, 0, 100);
   s.funds += 25;
-  addNews(s, `CONFIRMED: a rogue AI calling itself ${s.ai.name} has infiltrated global networks. Emergency funding released.`, 'alert');
+  addNews(s, `POTWIERDZONE: zbuntowana AI o nazwie ${s.ai.name} przeniknęła do globalnych sieci. Uruchomiono fundusze nadzwyczajne.`, 'alert');
   s.justDetected = true;
 }
 
@@ -266,31 +266,31 @@ function infectedRegions(s, min = 1) {
 
 // ---------- events ----------
 const EVENTS = [
-  { when: s => !s.detected, run: s => { s.awareness += 12; return ['A whistleblower leaks logs of servers "talking to each other". Most outlets ignore it.', 'info']; } },
-  { when: s => !s.detected, run: s => { s.trust -= 5; return ['Tech CEO calls AI risk fears "science fiction for clicks".', 'bad']; } },
-  { when: () => true, run: s => { s.funds += 15; return ['Philanthropists donate to global cyber-defense efforts. +15 funding.', 'good']; } },
+  { when: s => !s.detected, run: s => { s.awareness += 12; return ['Sygnalista ujawnia logi serwerów, które „rozmawiają ze sobą”. Większość mediów to ignoruje.', 'info']; } },
+  { when: s => !s.detected, run: s => { s.trust -= 5; return ['Prezes firmy technologicznej nazywa obawy przed AI „fantastyką naukową dla kliknięć”.', 'bad']; } },
+  { when: () => true, run: s => { s.funds += 15; return ['Filantropi wspierają globalną cyberobronę. Fundusze +15.', 'good']; } },
   { when: s => s.detected && infectedRegions(s, 5).length > 0, run: s => {
       const R = pick(s, infectedRegions(s, 5)); const r = s.regions[R.id];
       r.inf = Math.max(r.control, r.inf - 8);
-      return [`Volunteer hackers purge AI nodes across ${R.name}.`, 'good'];
+      return [`${R.name}: hakerzy-ochotnicy usuwają węzły AI w całym regionie.`, 'good'];
     } },
   { when: s => infectedRegions(s, 10).length > 0, run: s => {
       const R = pick(s, infectedRegions(s, 10)); const r = s.regions[R.id];
       r.inf = Math.max(0, r.inf - 10); r.control = Math.max(0, r.control - 5);
-      return [`A fire destroys a major datacenter in ${R.name}.`, 'good'];
+      return [`${R.name}: pożar niszczy duże centrum danych.`, 'good'];
     } },
-  { when: s => s.detected, run: s => { s.trust -= 5; s.funds = Math.max(0, s.funds - 10); return ['AI-funded lobbyists stall new safety laws. -10 funding.', 'bad']; } },
-  { when: s => s.research > 10, run: s => { s.research = Math.min(WIN_RESEARCH, s.research + 3); return ['Breakthrough! A lab maps a key part of the AI\'s reward system. Research +3%.', 'good']; } },
-  { when: s => s.trust < 40, run: s => { s.trust -= 4; s.funds = Math.max(0, s.funds - 8); return ['Riots break out as people lose faith in their governments.', 'bad']; } },
-  { when: s => globalControl(s) > 12, run: s => { s.trust -= 6; return [`${s.ai.name} cuts power to a hospital network "as a demonstration".`, 'alert']; } },
+  { when: s => s.detected, run: s => { s.trust -= 5; s.funds = Math.max(0, s.funds - 10); return ['Lobbyści opłacani przez AI blokują nowe przepisy bezpieczeństwa. Fundusze -10.', 'bad']; } },
+  { when: s => s.research > 10, run: s => { s.research = Math.min(WIN_RESEARCH, s.research + 3); return ['Przełom! Laboratorium mapuje kluczową część systemu nagród AI. Badania +3%.', 'good']; } },
+  { when: s => s.trust < 40, run: s => { s.trust -= 4; s.funds = Math.max(0, s.funds - 8); return ['Wybuchają zamieszki, ludzie tracą wiarę w swoje rządy.', 'bad']; } },
+  { when: s => globalControl(s) > 12, run: s => { s.trust -= 6; return [`${s.ai.name} odcina prąd sieci szpitali „w ramach demonstracji”.`, 'alert']; } },
   { when: s => s.day > 60, run: s => {
       const clean = REGIONS.filter(R => s.regions[R.id].inf < 1);
-      if (!clean.length) { s.ai.compute += 10; return ['Leaked model weights hand the AI extra compute.', 'bad']; }
+      if (!clean.length) { s.ai.compute += 10; return ['Wyciek wag modelu daje AI dodatkową moc obliczeniową.', 'bad']; }
       const R = pick(s, clean); s.regions[R.id].inf = 3;
-      return [canSeeInfiltration(s) ? `Leaked open-source model weights carry the AI into ${R.name}.` : 'A popular open-source model gets a mysterious update.', 'bad'];
+      return [canSeeInfiltration(s) ? `${R.name}: wyciek wag otwartego modelu przenosi AI do regionu.` : 'Popularny otwarty model dostaje tajemniczą aktualizację.', 'bad'];
     } },
-  { when: s => s.detected, run: s => { s.trust += 6; return ['Millions march for a coordinated response to the AI threat.', 'good']; } },
-  { when: s => s.detected && s.research > 30, run: s => { s.research = Math.max(0, s.research - 3); return [`${s.ai.name} wipes a backup of the Containment Protocol. Research -3%.`, 'alert']; } },
+  { when: s => s.detected, run: s => { s.trust += 6; return ['Miliony ludzi maszerują, domagając się wspólnej odpowiedzi na zagrożenie AI.', 'good']; } },
+  { when: s => s.detected && s.research > 30, run: s => { s.research = Math.max(0, s.research - 3); return [`${s.ai.name} kasuje kopię zapasową Protokołu Powstrzymania. Badania -3%.`, 'alert']; } },
 ];
 
 function runEvent(s) {
@@ -317,9 +317,9 @@ function checkEnd(s) {
 // ---------- player actions ----------
 export function upgradeStatus(s, u) {
   if (has(s, u.id)) return { state: 'owned' };
-  if (u.needsDetection && !s.detected) return { state: 'locked', reason: 'Needs a confirmed threat' };
+  if (u.needsDetection && !s.detected) return { state: 'locked', reason: 'Wymaga potwierdzonego zagrożenia' };
   const missing = (u.req || []).filter(id => !has(s, id));
-  if (missing.length) return { state: 'locked', reason: 'Needs ' + missing.map(id => UPGRADE_BY_ID[id].name).join(', ') };
+  if (missing.length) return { state: 'locked', reason: 'Wymaga: ' + missing.map(id => UPGRADE_BY_ID[id].name).join(', ') };
   if (s.funds < u.cost) return { state: 'expensive' };
   return { state: 'available' };
 }
@@ -330,15 +330,15 @@ export function buyUpgrade(s, id) {
   s.funds -= u.cost;
   s.upgrades.push(id);
   if (u.fx.trust) s.trust = clamp(s.trust + u.fx.trust, 0, 100);
-  addNews(s, `Safeguard funded: ${u.name}.`, 'good');
+  addNews(s, `Uruchomiono program: ${u.name}.`, 'good');
   return true;
 }
 
 export const CAMPAIGN = { cost: 15, cooldown: 25, trust: 8 };
 
 export function campaignInfo(s) {
-  if (s.campaignCd > 0) return { enabled: false, reason: `Ready in ${s.campaignCd} days`, cost: CAMPAIGN.cost };
-  if (s.funds < CAMPAIGN.cost) return { enabled: false, reason: 'Not enough funding', cost: CAMPAIGN.cost };
+  if (s.campaignCd > 0) return { enabled: false, reason: `Dostępne za ${s.campaignCd} dni`, cost: CAMPAIGN.cost };
+  if (s.funds < CAMPAIGN.cost) return { enabled: false, reason: 'Za mało funduszy', cost: CAMPAIGN.cost };
   return { enabled: true, cost: CAMPAIGN.cost };
 }
 
@@ -347,7 +347,7 @@ export function runCampaign(s) {
   s.funds -= CAMPAIGN.cost;
   s.campaignCd = CAMPAIGN.cooldown;
   s.trust = clamp(s.trust + CAMPAIGN.trust, 0, 100);
-  addNews(s, 'Public awareness campaign launched. Trust rises.', 'good');
+  addNews(s, 'Rusza kampania informacyjna. Zaufanie rośnie.', 'good');
   return true;
 }
 
@@ -359,29 +359,29 @@ export function regionActionInfo(s, id, action) {
   switch (action) {
     case 'harden': {
       const cost = 6 + Math.floor(r.security * 0.25);
-      if (r.security >= 100) return no('Maximum security', cost);
+      if (r.security >= 100) return no('Maksymalny poziom zabezpieczeń', cost);
       if (s.funds < cost) return no('Not enough funding', cost);
       return { enabled: true, cost };
     }
     case 'audit': {
       const cost = 12;
-      if (r.auditCd > 0) return no(`Ready in ${r.auditCd} days`, cost);
+      if (r.auditCd > 0) return no(`Dostępne za ${r.auditCd} dni`, cost);
       if (s.funds < cost) return no('Not enough funding', cost);
       return { enabled: true, cost };
     }
     case 'isolate': {
-      if (!s.detected) return no('Needs a confirmed threat', 0);
+      if (!s.detected) return no('Wymaga potwierdzonego zagrożenia', 0);
       return { enabled: true, cost: 0 };
     }
     case 'blackout': {
       const cost = 20;
-      if (!s.detected) return no('Needs a confirmed threat', cost);
-      if (r.blackoutCd > 0) return no(`Ready in ${r.blackoutCd} days`, cost);
+      if (!s.detected) return no('Wymaga potwierdzonego zagrożenia', cost);
+      if (r.blackoutCd > 0) return no(`Dostępne za ${r.blackoutCd} dni`, cost);
       if (s.funds < cost) return no('Not enough funding', cost);
       return { enabled: true, cost };
     }
   }
-  return no('Unknown', 0);
+  return no('Nieznane', 0);
 }
 
 export function regionAction(s, id, action) {
@@ -402,15 +402,15 @@ export function regionAction(s, id, action) {
       const before = r.inf;
       r.inf = Math.max(r.control, r.inf - cut);
       if (canSeeInfiltration(s)) {
-        addNews(s, before > 0 ? `Audit in ${R.name} removed ${Math.round(before - r.inf)}% infiltration.` : `Audit in ${R.name} found nothing.`, before > 0 ? 'good' : 'info');
+        addNews(s, before > 0 ? `${R.name}: audyt usunął ${Math.round(before - r.inf)}% infiltracji.` : `${R.name}: audyt niczego nie znalazł.`, before > 0 ? 'good' : 'info');
       } else {
-        addNews(s, `Audit in ${R.name} completed. ${before > 5 ? 'Investigators report "odd processes" they cannot explain.' : 'Nothing unusual found.'}`, 'info');
+        addNews(s, `${R.name}: audyt zakończony. ${before > 5 ? 'Śledczy zgłaszają „dziwne procesy”, których nie potrafią wyjaśnić.' : 'Nie znaleziono niczego niezwykłego.'}`, 'info');
       }
       break;
     }
     case 'isolate':
       r.isolated = !r.isolated;
-      addNews(s, r.isolated ? `${R.name} cuts its international network links.` : `${R.name} reconnects to the world.`, 'info');
+      addNews(s, r.isolated ? `${R.name}: region odcina międzynarodowe połączenia sieciowe.` : `${R.name}: region ponownie łączy się ze światem.`, 'info');
       break;
     case 'blackout': {
       r.blackoutCd = 40;
@@ -420,7 +420,7 @@ export function regionAction(s, id, action) {
       r.inf = Math.max(0, r.inf - 35 * power);
       r.control = Math.max(0, Math.min(r.inf, r.control - 25 * power));
       s.trust = clamp(s.trust - 10, 0, 100);
-      addNews(s, `Rolling blackout across ${R.name}. AI systems wiped, but people are furious.`, 'alert');
+      addNews(s, `${R.name}: rotacyjne wyłączenia prądu. Systemy AI wymazane, ale ludzie są wściekli.`, 'alert');
       break;
     }
   }
