@@ -47,7 +47,7 @@ export function onUserChange(f) { listeners.add(f); }
 
 export async function signIn() {
   await initCloud();
-  if (!fb) throw new Error('Cloud save could not load. Check your connection and try again.');
+  if (!fb) throw new Error('Nie udało się wczytać zapisu w chmurze. Sprawdź połączenie i spróbuj ponownie.');
   const provider = new fb.auth.GoogleAuthProvider();
   try {
     await fb.auth.signInWithPopup(fb.authInst, provider);
@@ -65,7 +65,7 @@ export async function signOut() {
 }
 
 function slotDoc(slot) {
-  if (!fb || !user) throw new Error('Not signed in.');
+  if (!fb || !user) throw new Error('Nie zalogowano.');
   return fb.fs.doc(fb.db, 'users', user.uid, 'saves', slot);
 }
 

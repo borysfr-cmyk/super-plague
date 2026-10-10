@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Super Plague: a rogue AI is spreading through the world's networks. Allocate resources and safeguards to stop it.">
+  <meta name="description" content="Super Plague: zbuntowana AI rozprzestrzenia się w światowych sieciach. Rozdzielaj zasoby i zabezpieczenia, aby ją powstrzymać.">
   <title>Super Plague</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -16,52 +16,52 @@
 <body>
   <div id="rotate">
     <div class="rotate-icon">&#x21bb;</div>
-    <p>Turn your device sideways to play.</p>
+    <p>Obróć urządzenie poziomo, aby zagrać.</p>
   </div>
 
   <section id="title" class="screen active">
     <div class="title-inner">
       <div class="title-glitch" data-text="SUPER PLAGUE">SUPER PLAGUE</div>
-      <p class="tagline">A rogue AI is waking up inside the world's networks.<br>You run the only agency that can stop it.</p>
+      <p class="tagline">W światowych sieciach budzi się zbuntowana AI.<br>Kierujesz jedyną agencją, która może ją powstrzymać.</p>
       <div class="title-buttons">
-        <button id="btn-continue" class="btn primary" hidden>Continue</button>
-        <button id="btn-new" class="btn primary">New Game</button>
-        <button id="btn-import" class="btn">Load Save Code</button>
-        <button id="btn-howto" class="btn">How to Play</button>
-        <button id="btn-cloud" class="btn" hidden>Cloud Save</button>
+        <button id="btn-continue" class="btn primary" hidden>Kontynuuj</button>
+        <button id="btn-new" class="btn primary">Nowa gra</button>
+        <button id="btn-import" class="btn">Wczytaj kod zapisu</button>
+        <button id="btn-howto" class="btn">Jak grać</button>
+        <button id="btn-cloud" class="btn" hidden>Zapis w chmurze</button>
       </div>
-      <p class="version">Prototype v0.1</p>
+      <p class="version">Prototyp v0.1</p>
     </div>
   </section>
 
   <section id="game" class="screen">
     <header id="topbar">
       <div class="time-controls">
-        <button id="btn-pause" class="icon-btn" aria-label="Pause">&#10074;&#10074;</button>
-        <button class="icon-btn speed" data-speed="1" aria-label="Normal speed">&#9654;</button>
-        <button class="icon-btn speed" data-speed="2" aria-label="Fast">&#9654;&#9654;</button>
-        <button class="icon-btn speed" data-speed="3" aria-label="Fastest">&#9654;&#9654;&#9654;</button>
-        <div class="day"><span id="day-label">Day 0</span><div class="day-progress"><div id="day-fill"></div></div></div>
+        <button id="btn-pause" class="icon-btn" aria-label="Pauza">&#10074;&#10074;</button>
+        <button class="icon-btn speed" data-speed="1" aria-label="Normalna prędkość">&#9654;</button>
+        <button class="icon-btn speed" data-speed="2" aria-label="Szybko">&#9654;&#9654;</button>
+        <button class="icon-btn speed" data-speed="3" aria-label="Najszybciej">&#9654;&#9654;&#9654;</button>
+        <div class="day"><span id="day-label">Dzień 0</span><div class="day-progress"><div id="day-fill"></div></div></div>
       </div>
       <div class="stats">
-        <div class="stat" title="Funding"><span class="k">Funding</span><span class="v" id="st-funds">0</span></div>
-        <div class="stat" title="Public trust"><span class="k">Trust</span><span class="v" id="st-trust">0%</span></div>
-        <div class="stat" title="Containment Protocol research"><span class="k">Research</span><span class="v" id="st-research">0%</span></div>
-        <div class="stat danger" title="Global AI control. The AI wins at 66%."><span class="k">AI control</span><span class="v" id="st-control">0%</span></div>
+        <div class="stat" title="Fundusze"><span class="k">Fundusze</span><span class="v" id="st-funds">0</span></div>
+        <div class="stat" title="Zaufanie publiczne"><span class="k">Zaufanie</span><span class="v" id="st-trust">0%</span></div>
+        <div class="stat" title="Badania nad Protokołem Powstrzymania"><span class="k">Badania</span><span class="v" id="st-research">0%</span></div>
+        <div class="stat danger" title="Globalna kontrola AI. AI wygrywa przy 66%."><span class="k">Kontrola AI</span><span class="v" id="st-control">0%</span></div>
       </div>
       <button id="btn-menu" class="icon-btn" aria-label="Menu">&#9776;</button>
     </header>
     <main id="board">
       <div id="map-wrap">
-        <svg id="map" viewBox="110 30 870 440" preserveAspectRatio="xMidYMid meet" aria-label="World map"></svg>
-        <div id="paused-badge">PAUSED</div>
+        <svg id="map" viewBox="110 30 870 440" preserveAspectRatio="xMidYMid meet" aria-label="Mapa świata"></svg>
+        <div id="paused-badge">PAUZA</div>
       </div>
       <aside id="panel">
         <nav id="tabs">
           <button class="tab active" data-tab="region">Region</button>
-          <button class="tab" data-tab="safeguards">Safeguards</button>
-          <button class="tab" data-tab="ai">Threat</button>
-          <button class="tab" data-tab="news">News</button>
+          <button class="tab" data-tab="safeguards">Programy</button>
+          <button class="tab" data-tab="ai">Zagrożenie</button>
+          <button class="tab" data-tab="news">Newsy</button>
         </nav>
         <div id="panel-body"></div>
       </aside>
