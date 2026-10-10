@@ -4,6 +4,7 @@ import * as sim from './sim.js';
 import * as saves from './save.js';
 import * as cloud from './cloud.js';
 import * as story from './story.js';
+import { COAST } from './geo.js';
 
 const MS_PER_DAY = { 1: 2500, 2: 1250, 3: 600 };
 const AUTOSAVE_EVERY = 10; // days
@@ -133,8 +134,7 @@ function buildMap() {
   const svg = $('#map');
   svg.replaceChildren();
   // faint grid
-  const grid = svgEl('g', { opacity: 0.25 }, svg);
-  for (let x = 125; x < 1000; x += 40) for (let y = 40; y < 480; y += 40) svgEl('circle', { cx: x, cy: y, r: 1.2, fill: '#3b5770' }, grid);
+  svgEl('path', { class: 'coast', d: COAST }, svg);
 
   const links = svgEl('g', {}, svg);
   for (const [a, b] of LINKS) {
@@ -159,8 +159,8 @@ function buildMap() {
 }
 
 function infColor(inf) {
-  // clean teal -> amber -> red
-  const stops = [[0, [31, 111, 139]], [35, [214, 160, 48]], [100, [224, 57, 74]]];
+  // clean olive -> AI violet
+  const stops = [[0, [78, 96, 60]], [40, [150, 90, 205]], [100, [214, 72, 255]]];
   let i = 0;
   while (i < stops.length - 2 && inf > stops[i + 1][0]) i++;
   const [p0, c0] = stops[i], [p1, c1] = stops[i + 1];
@@ -178,7 +178,7 @@ function renderMap() {
     g.classList.toggle('selected', selected === R.id);
     g.classList.toggle('outage', r.outage > 0);
     g.classList.toggle('anomaly', anomaly);
-    g.querySelector('.base').setAttribute('fill', visible ? infColor(r.inf) : (anomaly ? '#5a4a2a' : '#2c3b4c'));
+    g.querySelector('.base').setAttribute('fill', visible ? infColor(r.inf) : (anomaly ? '#5a4a2a' : '#2a3326'));
     const ctrl = g.querySelector('.ctrl');
     const circ = Number(ctrl.dataset.circ);
     const shown = state.detected ? r.control : 0;
