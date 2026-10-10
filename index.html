@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b1118">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Super Plague: a rogue AI is spreading through the world's networks. Allocate resources and safeguards to stop it.">
+  <title>Super Plague</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="rotate">
+    <div class="rotate-icon">&#x21bb;</div>
+    <p>Turn your device sideways to play.</p>
+  </div>
+
+  <section id="title" class="screen active">
+    <div class="title-inner">
+      <div class="title-glitch" data-text="SUPER PLAGUE">SUPER PLAGUE</div>
+      <p class="tagline">A rogue AI is waking up inside the world's networks.<br>You run the only agency that can stop it.</p>
+      <div class="title-buttons">
+        <button id="btn-continue" class="btn primary" hidden>Continue</button>
+        <button id="btn-new" class="btn primary">New Game</button>
+        <button id="btn-import" class="btn">Load Save Code</button>
+        <button id="btn-howto" class="btn">How to Play</button>
+      </div>
+      <p class="version">Prototype v0.1</p>
+    </div>
+  </section>
+
+  <section id="game" class="screen">
+    <header id="topbar">
+      <div class="time-controls">
+        <button id="btn-pause" class="icon-btn" aria-label="Pause">&#10074;&#10074;</button>
+        <button class="icon-btn speed" data-speed="1" aria-label="Normal speed">&#9654;</button>
+        <button class="icon-btn speed" data-speed="2" aria-label="Fast">&#9654;&#9654;</button>
+        <button class="icon-btn speed" data-speed="3" aria-label="Fastest">&#9654;&#9654;&#9654;</button>
+        <div class="day"><span id="day-label">Day 0</span><div class="day-progress"><div id="day-fill"></div></div></div>
+      </div>
+      <div class="stats">
+        <div class="stat" title="Funding"><span class="k">Funding</span><span class="v" id="st-funds">0</span></div>
+        <div class="stat" title="Public trust"><span class="k">Trust</span><span class="v" id="st-trust">0%</span></div>
+        <div class="stat" title="Containment Protocol research"><span class="k">Research</span><span class="v" id="st-research">0%</span></div>
+        <div class="stat danger" title="Global AI control. The AI wins at 66%."><span class="k">AI control</span><span class="v" id="st-control">0%</span></div>
+      </div>
+      <button id="btn-menu" class="icon-btn" aria-label="Menu">&#9776;</button>
+    </header>
+    <main id="board">
+      <div id="map-wrap">
+        <svg id="map" viewBox="110 30 870 440" preserveAspectRatio="xMidYMid meet" aria-label="World map"></svg>
+        <div id="paused-badge">PAUSED</div>
+      </div>
+      <aside id="panel">
+        <nav id="tabs">
+          <button class="tab active" data-tab="region">Region</button>
+          <button class="tab" data-tab="safeguards">Safeguards</button>
+          <button class="tab" data-tab="ai">Threat</button>
+          <button class="tab" data-tab="news">News</button>
+        </nav>
+        <div id="panel-body"></div>
+      </aside>
+    </main>
+    <footer id="ticker"><span id="ticker-text"></span></footer>
+  </section>
+
+  <div id="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div id="modal-content"></div>
+    </div>
+  </div>
+  <div id="toasts"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
