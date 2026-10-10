@@ -83,7 +83,7 @@ button:disabled { cursor: not-allowed; }
 #panel { flex: 1; max-width: 440px; min-width: 260px; display: flex; flex-direction: column; background: var(--bg2);
   border-left: 1px solid var(--line); min-height: 0; }
 #tabs { display: flex; border-bottom: 1px solid var(--line); }
-.tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; padding: 9px 4px; color: var(--muted);
+.tab { flex: 1 1 auto; background: none; border: none; border-bottom: 2px solid transparent; padding: 9px 4px; color: var(--muted);
   font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
 .tab.active { color: var(--text); border-bottom-color: var(--accent); }
 .tab.alert::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--bad);
@@ -233,4 +233,49 @@ textarea.code { width: 100%; height: 90px; background: var(--bg); color: var(--t
   .stat:nth-child(3)::before { content: "BAD"; }
   .stat:nth-child(4)::before { content: "AI"; }
   .speed[data-speed="3"] { display: none; }
+}
+
+/* ---------- HQ: tasks and messages ---------- */
+.avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--c); border: 1.5px solid var(--c);
+  background: color-mix(in srgb, var(--c) 14%, var(--panel)); }
+.mission { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--good); border-radius: var(--radius);
+  padding: 8px 10px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 5px; }
+.mission .row { display: flex; align-items: center; gap: 8px; }
+.mission-head { flex: 1; min-width: 0; }
+.mission .name { font-weight: 600; font-size: 13px; }
+.mission .who { font-size: 11px; color: var(--muted); }
+.mission .left { font-family: var(--mono); font-size: 11.5px; color: var(--warn); white-space: nowrap; }
+.mission .desc { font-size: 12px; color: #b9cadb; line-height: 1.35; }
+.mission .reward { font-size: 11px; color: var(--good); }
+.mission.done, .mission.failed { opacity: 0.6; padding: 6px 10px; }
+.mission.done .left { color: var(--good); }
+.mission.failed { border-left-color: var(--bad); }
+.mission.failed .left { color: var(--bad); }
+.mission.done .desc, .mission.failed .desc, .mission.done .reward, .mission.failed .reward { display: none; }
+.chip.task { color: var(--good); border-color: #1f6b47; }
+
+.msgs { list-style: none; margin: 0; padding: 0; }
+.msg { display: flex; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.msg.unread .text { color: var(--text); }
+.msg.unread .msg-head b::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  margin-left: 5px; vertical-align: middle; }
+.msg-body { flex: 1; min-width: 0; }
+.msg-head { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; flex-wrap: wrap; }
+.msg-head .role { font-size: 10.5px; color: var(--muted); }
+.msg-head .d { margin-left: auto; font-family: var(--mono); color: var(--muted); font-size: 11px; }
+.msg .text { font-size: 12.5px; line-height: 1.4; color: #b9cadb; margin-top: 2px; }
+.msg .tag { font-size: 11px; margin-top: 4px; color: var(--warn); }
+.msg .tag.done { color: var(--good); }
+.msg .tag.failed { color: var(--bad); }
+
+.toast.msg { pointer-events: auto; display: flex; flex-direction: column; gap: 2px; text-align: left; color: var(--text);
+  border-left-color: var(--c); cursor: pointer; }
+.toast.msg b { color: var(--c); font-size: 12px; }
+.toast.msg small { color: var(--warn); font-size: 11px; }
+.toast.msg small.done { color: var(--good); }
+.toast.msg small.failed { color: var(--bad); }
+@media (max-height: 500px) {
+  .toast.msg span { font-size: 11px; line-height: 1.3; }
+  .toast.msg b { font-size: 11px; }
 }

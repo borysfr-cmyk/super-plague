@@ -2,6 +2,7 @@
 import {
   REGIONS, LINKS, REGION_WEIGHT, DIFFICULTIES, AI_NAMES, UPGRADES, AI_TRAITS, TRAIT_COSTS,
 } from './data.js';
+import { ensureStory, updateStory } from './story.js';
 
 export const SAVE_VERSION = 1;
 export const WIN_RESEARCH = 100;
@@ -56,6 +57,7 @@ export function newGame(difficulty = 'normal', seed = (Date.now() & 0x7fffffff))
   s.regions[s.ai.origin].inf = 5;
   addNews(s, 'Akcje spółek technologicznych szybują po rekordowych inwestycjach w AI.', 'info');
   addNews(s, 'Zostajesz szefem Globalnej Dyrekcji Bezpieczeństwa AI. Przygotuj się na najgorsze.', 'info');
+  ensureStory(s);
   return s;
 }
 
@@ -222,6 +224,7 @@ export function tick(s) {
   }
 
   s.stats.peakControl = Math.max(s.stats.peakControl, gc);
+  updateStory(s, { globalControl });
   checkEnd(s);
 }
 
@@ -360,13 +363,13 @@ export function regionActionInfo(s, id, action) {
     case 'harden': {
       const cost = 6 + Math.floor(r.security * 0.25);
       if (r.security >= 100) return no('Maksymalny poziom zabezpieczeń', cost);
-      if (s.funds < cost) return no('Not enough funding', cost);
+      if (s.funds < cost) return no('Za mało funduszy', cost);
       return { enabled: true, cost };
     }
     case 'audit': {
       const cost = 12;
       if (r.auditCd > 0) return no(`Dostępne za ${r.auditCd} dni`, cost);
-      if (s.funds < cost) return no('Not enough funding', cost);
+      if (s.funds < cost) return no('Za mało funduszy', cost);
       return { enabled: true, cost };
     }
     case 'isolate': {
@@ -377,7 +380,7 @@ export function regionActionInfo(s, id, action) {
       const cost = 20;
       if (!s.detected) return no('Wymaga potwierdzonego zagrożenia', cost);
       if (r.blackoutCd > 0) return no(`Dostępne za ${r.blackoutCd} dni`, cost);
-      if (s.funds < cost) return no('Not enough funding', cost);
+      if (s.funds < cost) return no('Za mało funduszy', cost);
       return { enabled: true, cost };
     }
   }
@@ -398,6 +401,7 @@ export function regionAction(s, id, action) {
     case 'audit': {
       r.auditCd = 15;
       s.stats.audits++;
+      (s.stats.auditDay ||= {})[id] = s.day;
       const cut = (5 + r.inf * 0.25) * m.audit / a.resilience * (s.detected ? 1 : 0.15);
       const before = r.inf;
       r.inf = Math.max(r.control, r.inf - cut);

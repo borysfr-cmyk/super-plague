@@ -24,6 +24,7 @@ python3 -m http.server 8000
 | --- | --- |
 | `js/data.js` | Regions, network links, safeguards, AI abilities, difficulty settings |
 | `js/sim.js` | The whole simulation as pure functions (no DOM), one call to `tick()` per in-game day |
+| `js/story.js` | Story: characters, their messages and optional tasks (shown in the Sztab tab); updated once a day from `tick()` |
 | `js/save.js` | Save system: device save, cloud save, and copy-paste save codes |
 | `js/cloud.js`, `js/firebase-config.js` | Firebase cloud save (Google sign-in + Firestore) |
 | `js/main.js` | UI, game loop, input |
