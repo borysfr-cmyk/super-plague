@@ -5,6 +5,7 @@ import * as saves from './save.js';
 import * as cloud from './cloud.js';
 import * as story from './story.js';
 import { COAST } from './geo.js';
+import { portrait } from './portraits.js';
 
 const MS_PER_DAY = { 1: 2500, 2: 1250, 3: 600 };
 const AUTOSAVE_EVERY = 10; // days
@@ -68,6 +69,8 @@ function setPaused(p) {
   $('#btn-pause').classList.toggle('paused', p);
   $('#btn-pause').innerHTML = p ? '&#9654;' : '&#10074;&#10074;';
   $('#btn-pause').setAttribute('aria-label', p ? 'Wznów' : 'Pauza');
+  // freeze the AI packets on the map while paused
+  if (p) $('#map').pauseAnimations(); else $('#map').unpauseAnimations();
   if (p && state && !state.over) autosave();
 }
 
@@ -133,7 +136,6 @@ function svgEl(tag, attrs = {}, parent) {
 function buildMap() {
   const svg = $('#map');
   svg.replaceChildren();
-  // faint grid
   svgEl('path', { class: 'coast', d: COAST }, svg);
 
   const links = svgEl('g', {}, svg);
@@ -141,11 +143,15 @@ function buildMap() {
     const A = REGIONS.find(r => r.id === a), B = REGIONS.find(r => r.id === b);
     svgEl('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: 'link', 'data-a': a, 'data-b': b }, links);
   }
+  svgEl('g', { class: 'flows' }, svg);
+  flowKeys.clear();
   const nodes = svgEl('g', {}, svg);
   for (const R of REGIONS) {
     const r = nodeR(R);
     const g = svgEl('g', { class: 'node', 'data-id': R.id, transform: `translate(${R.x},${R.y})` }, nodes);
     svgEl('circle', { class: 'halo', r: r + 14 }, g);
+    svgEl('circle', { class: 'shield', r: r + 20 }, g);
+    svgEl('circle', { class: 'hazard', r: r + 6 }, g);
     svgEl('circle', { class: 'base', r }, g);
     svgEl('circle', { class: 'sec', r: r + 4 }, g);
     const circ = 2 * Math.PI * (r + 9);
@@ -154,7 +160,36 @@ function buildMap() {
     svgEl('text', { class: 'val', y: 5 }, g).textContent = '';
     svgEl('text', { class: 'name', y: r + 30 }, g).textContent = R.short;
     svgEl('text', { class: 'tag', y: -r - 14 }, g).textContent = '';
+    const warn = svgEl('g', { class: 'warn', transform: `translate(${r + 10},${-r * 0.55})` }, g);
+    svgEl('path', { d: 'M0,-11 L10,7 L-10,7 Z' }, warn);
+    svgEl('text', { y: 5 }, warn).textContent = '!';
     g.addEventListener('click', () => selectRegion(R.id));
+  }
+}
+
+// Alarm effects on hot links: a glowing line plus packets running from the more infected end.
+// Rebuilt only when a link's direction or hot state changes, so the packets don't restart every day.
+const flowKeys = new Map();
+function renderFlows(visible) {
+  const layer = $('#map .flows');
+  for (const [a0, b0] of LINKS) {
+    const A = state.regions[a0], B = state.regions[b0];
+    const hot = visible && !A.isolated && !B.isolated && Math.max(A.inf, B.inf) > 30 && Math.min(A.inf, B.inf) > 0;
+    const [a, b] = A.inf >= B.inf ? [a0, b0] : [b0, a0];
+    const id = `${a0}-${b0}`, key = hot ? `${a}>${b}` : '';
+    if (flowKeys.get(id) === key) continue;
+    flowKeys.set(id, key);
+    layer.querySelector(`[data-link="${id}"]`)?.remove();
+    if (!hot) continue;
+    const P = REGIONS.find(r => r.id === a), Q = REGIONS.find(r => r.id === b);
+    const g = svgEl('g', { 'data-link': id }, layer);
+    svgEl('line', { class: 'glow', x1: P.x, y1: P.y, x2: Q.x, y2: Q.y }, g);
+    const len = Math.hypot(Q.x - P.x, Q.y - P.y), dur = len / 90;
+    for (let i = 0; i < 2; i++) {
+      const pkt = svgEl('circle', { class: 'pkt', r: 3.5 }, g);
+      svgEl('animateMotion', { path: `M${P.x},${P.y} L${Q.x},${Q.y}`, dur: `${dur.toFixed(2)}s`,
+        begin: `${(i * dur / 2).toFixed(2)}s`, repeatCount: 'indefinite' }, pkt);
+    }
   }
 }
 
@@ -178,6 +213,8 @@ function renderMap() {
     g.classList.toggle('selected', selected === R.id);
     g.classList.toggle('outage', r.outage > 0);
     g.classList.toggle('anomaly', anomaly);
+    g.classList.toggle('isolated', r.isolated);
+    g.dataset.lvl = !visible ? 0 : r.inf >= 70 ? 3 : r.inf >= 40 ? 2 : r.inf > 0 ? 1 : 0;
     g.querySelector('.base').setAttribute('fill', visible ? infColor(r.inf) : (anomaly ? '#5a4a2a' : '#2a3326'));
     const ctrl = g.querySelector('.ctrl');
     const circ = Number(ctrl.dataset.circ);
@@ -197,6 +234,9 @@ function renderMap() {
     l.classList.toggle('cut', a.isolated || b.isolated);
     l.classList.toggle('hot', visible && Math.max(a.inf, b.inf) > 30 && Math.min(a.inf, b.inf) > 0);
   });
+  renderFlows(visible);
+  // the map edge glows violet as the AI nears the 66% control needed to win
+  $('#map-wrap').style.setProperty('--threat', state.detected ? Math.min(1, sim.globalControl(state) / sim.LOSE_CONTROL).toFixed(2) : 0);
 }
 
 function selectRegion(id) {
@@ -321,7 +361,7 @@ function threatPanel() {
 
 function avatar(id) {
   const c = story.CHARACTERS[id];
-  return `<span class="avatar" style="--c:${c.color}">${c.initials}</span>`;
+  return `<span class="avatar" style="--c:${c.color}">${portrait(id, c.color, c.initials)}</span>`;
 }
 
 function missionCard(m) {
@@ -431,17 +471,21 @@ function messageToast(n) {
   const el = document.createElement('button');
   el.className = 'toast msg';
   el.style.setProperty('--c', c.color);
+  el.innerHTML = avatar(n.from);
+  const body = document.createElement('div');
+  body.className = 'toast-body';
   const who = document.createElement('b');
   who.textContent = story.characterName(state, n.from);
   const text = document.createElement('span');
   text.textContent = n.text.length > 110 ? n.text.slice(0, 107).trimEnd() + '…' : n.text;
-  el.append(who, text);
+  body.append(who, text);
   if (n.mission) {
     const tag = document.createElement('small');
     tag.className = n.kind;
     tag.textContent = messageTag(n);
-    el.append(tag);
+    body.append(tag);
   }
+  el.append(body);
   el.onclick = () => { el.remove(); setTab('hq'); };
   $('#toasts').appendChild(el);
   while ($('#toasts').children.length > 2) $('#toasts').firstChild.remove();
