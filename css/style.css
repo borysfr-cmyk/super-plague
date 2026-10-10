@@ -199,6 +199,14 @@ button.card:disabled { opacity: 0.55; }
 .card.owned { border-color: #1f6b47; background: #112418; }
 .card.owned .cost { color: var(--good); }
 .upgrades { display: flex; flex-direction: column; gap: 6px; }
+/* hexagonal icon patches on program, action and AI trait cards */
+.card:has(.patch), .trait { display: grid; grid-template-columns: 38px 1fr; column-gap: 9px; align-items: start; }
+.card:has(.patch) > :not(.patch), .trait > :not(.patch) { grid-column: 2; }
+.patch { grid-row: 1 / span 3; position: relative; width: 38px; height: 42px; padding: 10px 9px; color: var(--ic); background: var(--ic);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.patch::before { content: ""; position: absolute; inset: 2px; background: #151c12; clip-path: inherit; }
+.patch svg { position: relative; display: block; width: 100%; height: 100%; }
+@media (max-width: 700px) { .actions { grid-template-columns: 1fr; } }
 
 .trait { border-left: 3px solid var(--ai); padding: 4px 8px; margin: 6px 0; background: #1d1426; border-radius: 0 var(--radius) var(--radius) 0; }
 .trait .name { font-weight: 600; font-size: 13px; color: #e2b0ff; }

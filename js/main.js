@@ -6,6 +6,7 @@ import * as cloud from './cloud.js';
 import * as story from './story.js';
 import { COAST } from './geo.js';
 import { portrait } from './portraits.js';
+import { patch, CAT_COLORS, ACTION_COLORS } from './icons.js';
 
 const MS_PER_DAY = { 1: 2500, 2: 1250, 3: 600 };
 const AUTOSAVE_EVERY = 10; // days
@@ -305,7 +306,7 @@ function regionPanel() {
     const t = ACTION_TEXT[a];
     const name = a === 'isolate' && r.isolated ? 'Przywróć połączenia' : t.name;
     const desc = a === 'isolate' && r.isolated ? 'Przywróć połączenia regionu ze światem. Fundusze i zaufanie wracają do normy.' : t.desc;
-    html += `<button class="card" data-action="region" data-arg="${a}" ${info.enabled ? '' : 'disabled'}>
+    html += `<button class="card" data-action="region" data-arg="${a}" ${info.enabled ? '' : 'disabled'}>${patch(a, ACTION_COLORS[a])}
       <div class="row"><span class="name">${name}</span><span class="cost">${info.cost ? '$' + info.cost : 'Za darmo'}</span></div>
       <div class="desc">${desc}</div>${info.enabled ? '' : `<div class="why">${info.reason}</div>`}</button>`;
   }
@@ -315,7 +316,7 @@ function regionPanel() {
 function safeguardsPanel() {
   const c = sim.campaignInfo(state);
   let html = `<p class="panel-title">Programy globalne</p><div class="panel-sub">Działają na całym świecie. Fundusze: $${fmt(state.funds)}</div>
-    <button class="card" data-action="campaign" ${c.enabled ? '' : 'disabled'}>
+    <button class="card" data-action="campaign" ${c.enabled ? '' : 'disabled'}>${patch('campaign', ACTION_COLORS.campaign)}
       <div class="row"><span class="name">Kampania informacyjna</span><span class="cost">$${c.cost}</span></div>
       <div class="desc">Zmobilizuj opinię publiczną. Zaufanie +${sim.CAMPAIGN.trust}. Można powtarzać.</div>${c.enabled ? '' : `<div class="why">${c.reason}</div>`}</button>`;
   for (const cat of UPGRADE_CATS) {
@@ -323,7 +324,7 @@ function safeguardsPanel() {
     for (const u of UPGRADES.filter(x => x.cat === cat)) {
       const st = sim.upgradeStatus(state, u);
       const owned = st.state === 'owned';
-      html += `<button class="card ${owned ? 'owned' : ''}" data-action="upgrade" data-arg="${u.id}" ${st.state === 'available' ? '' : 'disabled'}>
+      html += `<button class="card ${owned ? 'owned' : ''}" data-action="upgrade" data-arg="${u.id}" ${st.state === 'available' ? '' : 'disabled'}>${patch(u.id, CAT_COLORS[u.cat])}
         <div class="row"><span class="name">${u.name}</span><span class="cost">${owned ? 'Aktywne' : '$' + u.cost}</span></div>
         <div class="desc">${u.desc}</div>${st.state === 'locked' ? `<div class="why">${st.reason}</div>` : ''}</button>`;
     }
@@ -354,7 +355,7 @@ function threatPanel() {
   if (!state.ai.traits.length) html += '<p class="hint">Na razie brak.</p>';
   for (const id of [...state.ai.traits].reverse()) {
     const t = sim.TRAIT_BY_ID[id];
-    html += `<div class="trait"><div class="name">${t.name}</div><div class="desc">${t.desc}</div></div>`;
+    html += `<div class="trait">${patch(id, 'var(--ai)')}<div class="name">${t.name}</div><div class="desc">${t.desc}</div></div>`;
   }
   return html;
 }
