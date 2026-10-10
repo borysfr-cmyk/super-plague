@@ -732,6 +732,22 @@ $('#map').addEventListener('click', e => { if (!e.target.closest('.node')) { sel
 
 $('#btn-new').addEventListener('click', showNewGame);
 $('#btn-import').addEventListener('click', showImport);
+// Title screen: a radar with the world map and violet AI hotspots behind the logo
+function buildTitleRadar() {
+  const svg = $('#title-map');
+  const rings = svgEl('g', { class: 'rings', transform: 'translate(500,500)' }, svg);
+  for (let r = 80; r <= 480; r += 80) svgEl('circle', { r }, rings);
+  svgEl('path', { d: 'M-500,0 L500,0 M0,-500 L0,500' }, rings);
+  const world = svgEl('g', { transform: 'translate(500,500) scale(.62) translate(-545,-250)' }, svg);
+  svgEl('path', { class: 'coast', d: COAST }, world);
+  ['na', 'eu', 'ea', 'sas'].forEach((id, i) => {
+    const R = REGIONS.find(r => r.id === id);
+    svgEl('circle', { class: 'blip', cx: R.x, cy: R.y, r: 9 }, world);
+    svgEl('circle', { class: 'blip-ring', cx: R.x, cy: R.y, r: 22, style: `animation-delay:${i * 0.6}s` }, world);
+  });
+}
+buildTitleRadar();
+
 $('#btn-howto').addEventListener('click', () => showHowTo());
 $('#btn-cloud').addEventListener('click', () => showCloud());
 $('#btn-continue').addEventListener('click', async () => {
