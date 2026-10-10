@@ -3,6 +3,7 @@ import { REGIONS, LINKS, UPGRADES, UPGRADE_CATS, DIFFICULTIES } from './data.js'
 import * as sim from './sim.js';
 import * as saves from './save.js';
 import * as cloud from './cloud.js';
+import * as story from './story.js';
 
 const MS_PER_DAY = { 1: 2500, 2: 1250, 3: 600 };
 const AUTOSAVE_EVERY = 10; // days
@@ -21,6 +22,7 @@ let lastFrame = performance.now();
 let tab = 'region';
 let selected = null;
 let lastNewsSeen = 0;
+let lastMsgSeen = 0;
 let lastSavedDay = 0;
 let modalOpen = false;
 
@@ -36,8 +38,10 @@ async function refreshTitle() {
 
 function startGame(s, { intro = false } = {}) {
   state = s;
+  story.ensureStory(state); // saves from before the story update have no story yet
   selected = state.detected ? state.ai.origin : null;
   lastNewsSeen = state.newsSeq || 0;
+  lastMsgSeen = state.story.seq;
   lastSavedDay = state.day;
   acc = 0;
   tab = 'region';
@@ -251,6 +255,9 @@ function regionPanel() {
   if (r.isolated) chips.push('<span class="chip warn">Izolacja</span>');
   if (r.outage > 0) chips.push(`<span class="chip bad">Blackout · ${r.outage} dni</span>`);
   if (state.research >= sim.CORE_TRACE && R.id === state.ai.origin && r.inf > 0) chips.push('<span class="chip ai">Zlokalizowano rdzeń AI</span>');
+  for (const m of story.activeMissions(state)) {
+    if (m.region === R.id) chips.push(`<span class="chip task">Zadanie: ${esc(story.MISSION_BY_ID[m.id].title)}</span>`);
+  }
   if (chips.length) html += `<div class="chips">${chips.join('')}</div>`;
   html += `<div class="section-title">Środki zaradcze</div><div class="actions">`;
   for (const a of sim.REGION_ACTIONS) {
@@ -312,18 +319,74 @@ function threatPanel() {
   return html;
 }
 
+function avatar(id) {
+  const c = story.CHARACTERS[id];
+  return `<span class="avatar" style="--c:${c.color}">${c.initials}</span>`;
+}
+
+function missionCard(m) {
+  const def = story.MISSION_BY_ID[m.id];
+  const p = m.status === 'done' ? 1 : story.missionProgress(state, m);
+  const left = m.end - state.day;
+  const status = m.status === 'active' ? `${left} ${left === 1 ? 'dzień' : 'dni'}` : m.status === 'done' ? 'Wykonane' : 'Nieudane';
+  return `<div class="mission ${m.status}">
+    <div class="row">${avatar(def.from)}<div class="mission-head"><div class="name">${esc(def.title)}</div>
+      <div class="who">${esc(story.characterName(state, def.from))}</div></div><span class="left">${status}</span></div>
+    <div class="desc">${esc(story.missionDesc(state, m))}</div>
+    ${m.status === 'active' ? `<div class="bar"><div class="fill-good" style="width:${Math.round(p * 100)}%"></div></div>` : ''}
+    <div class="reward">Nagroda: ${story.rewardText(def.reward)}${def.penalty && m.status === 'active' ? ` · Porażka: ${story.rewardText(def.penalty)}` : ''}</div>
+  </div>`;
+}
+
+function messageTag(n) {
+  const def = n.mission && story.MISSION_BY_ID[n.mission];
+  if (!def) return '';
+  if (n.kind === 'new') return `Nowe zadanie: ${def.title}`;
+  if (n.kind === 'done') return `Zadanie wykonane: ${def.title} (${story.rewardText(def.reward)})`;
+  return `Zadanie nieudane: ${def.title}${def.penalty ? ` (${story.rewardText(def.penalty)})` : ''}`;
+}
+
+function hqPanel() {
+  const st = state.story;
+  const active = st.missions.filter(m => m.status === 'active');
+  const finished = st.missions.filter(m => m.status !== 'active').slice(-3).reverse();
+  let html = `<p class="panel-title">Sztab</p><div class="panel-sub">Wiadomości od zespołu. Zadania są opcjonalne, ale dają nagrody.</div>
+    <div class="section-title">Zadania</div>`;
+  html += active.length ? active.map(missionCard).join('') : '<p class="hint">Brak aktywnych zadań. Zespół odezwie się, gdy będzie czegoś potrzebował.</p>';
+  html += finished.map(missionCard).join('');
+  html += `<div class="section-title">Wiadomości</div><ul class="msgs">${st.msgs.map(n => {
+    const c = story.CHARACTERS[n.from];
+    const tag = messageTag(n);
+    return `<li class="msg ${n.id > (st.readId || 0) ? 'unread' : ''}">${avatar(n.from)}<div class="msg-body">
+      <div class="msg-head"><b>${esc(story.characterName(state, n.from))}</b><span class="role">${c.role}</span><span class="d">Dz. ${n.day}</span></div>
+      <div class="text">${esc(n.text)}</div>${tag ? `<div class="tag ${n.kind}">${esc(tag)}</div>` : ''}</div></li>`;
+  }).join('')}</ul>`;
+  return html;
+}
+
 function newsPanel() {
   return `<p class="panel-title">Wiadomości</p><ul class="news">${state.news.map(n =>
     `<li><span class="d">Dz. ${n.day}</span><span class="${n.type}">${esc(n.text)}</span></li>`).join('')}</ul>`;
 }
 
 function renderPanel() {
-  const html = { region: regionPanel, safeguards: safeguardsPanel, ai: threatPanel, news: newsPanel }[tab]();
+  const html = { region: regionPanel, safeguards: safeguardsPanel, ai: threatPanel, hq: hqPanel, news: newsPanel }[tab]();
   morph($('#panel-body'), html);
+  const st = state.story;
+  document.querySelector('.tab[data-tab="hq"]').classList.toggle('alert', tab !== 'hq' && st.seq > (st.readId || 0));
+  // Mark messages read a moment after they were shown, so the "new" highlight is visible first.
+  if (tab === 'hq' && st.seq > (st.readId || 0) && !markReadTimer) {
+    markReadTimer = setTimeout(() => {
+      markReadTimer = null;
+      if (state?.story === st && tab === 'hq') { st.readId = st.seq; renderPanel(); }
+    }, 2500);
+  }
   const unread = state.news.length && state.news[0].id > (state.newsReadId || 0);
   document.querySelector('.tab[data-tab="news"]').classList.toggle('alert', tab !== 'news' && unread && state.news[0].type !== 'info');
   if (tab === 'news' && state.news.length) state.newsReadId = state.news[0].id;
 }
+
+let markReadTimer = null;
 
 // Patch the panel in place instead of replacing it, so taps and scroll position survive re-renders.
 function morph(el, html) {
@@ -354,9 +417,35 @@ function render() {
 
 // ---------- toasts ----------
 function showNewToasts() {
+  const msgs = state.story.msgs.filter(n => n.id > lastMsgSeen);
+  lastMsgSeen = state.story.seq;
+  for (const n of msgs.slice(0, 2).reverse()) messageToast(n);
+  if (msgs.length) { if (state.news.length) lastNewsSeen = Math.max(lastNewsSeen, state.news[0].id); return; }
   const fresh = state.news.filter(n => n.id > lastNewsSeen && (n.type === 'alert' || n.type === 'ai' || n.type === 'bad'));
   if (state.news.length) lastNewsSeen = Math.max(lastNewsSeen, state.news[0].id);
   for (const n of fresh.slice(0, 2).reverse()) toast(n.text, n.type);
+}
+
+function messageToast(n) {
+  const c = story.CHARACTERS[n.from];
+  const el = document.createElement('button');
+  el.className = 'toast msg';
+  el.style.setProperty('--c', c.color);
+  const who = document.createElement('b');
+  who.textContent = story.characterName(state, n.from);
+  const text = document.createElement('span');
+  text.textContent = n.text.length > 110 ? n.text.slice(0, 107).trimEnd() + '…' : n.text;
+  el.append(who, text);
+  if (n.mission) {
+    const tag = document.createElement('small');
+    tag.className = n.kind;
+    tag.textContent = messageTag(n);
+    el.append(tag);
+  }
+  el.onclick = () => { el.remove(); setTab('hq'); };
+  $('#toasts').appendChild(el);
+  while ($('#toasts').children.length > 2) $('#toasts').firstChild.remove();
+  setTimeout(() => el.remove(), 7000);
 }
 
 function toast(text, type = '') {
@@ -402,6 +491,7 @@ function showIntro() {
       <li>Wydawaj <b>fundusze</b> na regionalne środki zaradcze i <b>programy globalne</b>.</li>
       <li>Gdy AI zostanie potwierdzona, doprowadź badania nad <b>Protokołem Powstrzymania</b> do 100%, aby wygrać.</li>
       <li>Przegrywasz, jeśli AI przejmie kontrolę nad ${sim.LOSE_CONTROL}% świata albo zaufanie publiczne spadnie do zera.</li>
+      <li>Twój zespół będzie przysyłać wiadomości i zadania do zakładki <b>Sztab</b>. Zadania są opcjonalne, ale dają nagrody.</li>
     </ul>
     <div class="modal-buttons"><button class="btn primary" data-go>Zaczynamy</button></div>`, {
     onOpen: el => el.querySelector('[data-go]').onclick = () => { closeModal(); setSpeed(1); },
@@ -415,7 +505,7 @@ function showDetection() {
     <p>Zbuntowana AI o nazwie <b>${esc(state.ai.name)}</b> przeniknęła do globalnych sieci. Rządy uruchomiły fundusze nadzwyczajne.</p>
     <ul><li>Badaj <b>Protokół Powstrzymania</b> (zacznij od Laboratoriów alignmentu).</li>
     <li>Izolacja regionów i blackouty sieci są już dostępne.</li>
-    <li>AI będzie rozwijać nowe zdolności, gromadząc moc obliczeniową. Śledź zakładkę Zagrożenie.</li></ul>
+    <li>AI będzie rozwijać nowe zdolności, gromadząc moc obliczeniową. Śledź zakładkę AI.</li></ul>
     <div class="modal-buttons"><button class="btn primary" data-go>Do dzieła</button></div>`, {
     onOpen: el => el.querySelector('[data-go]').onclick = () => { closeModal(); setPaused(false); },
   });
@@ -439,6 +529,7 @@ function showGameOver() {
       <span>Zdolności AI</span><span>${state.ai.traits.length}</span>
       <span>Badania</span><span>${dec(state.research, 1)}%</span>
       <span>Zarządzone blackouty</span><span>${state.stats.blackouts}</span>
+      <span>Wykonane zadania</span><span>${state.story?.completed || 0}</span>
     </div>
     <div class="modal-buttons"><button class="btn primary" data-new>Nowa gra</button><button class="btn" data-title>Ekran tytułowy</button></div>`, {
     onOpen: el => {
@@ -529,6 +620,7 @@ function showHowTo(back) {
       <li><b>Regionalne środki zaradcze:</b> wzmocnij zabezpieczenia (błękitny pierścień), przeprowadź audyt systemów, izoluj region lub zarządź blackout sieci.</li>
       <li><b>Programy globalne</b> obejmują wykrywanie, obronę, badania i społeczeństwo.</li>
       <li>Na początku nikt nie wie o istnieniu AI. Gdy zostanie <b>potwierdzona</b>, badaj Protokół Powstrzymania.</li>
+      <li>W zakładce <b>Sztab</b> znajdziesz wiadomości od zespołu i zadania. Są opcjonalne: możesz je wykonać dla nagrody albo grać po swojemu.</li>
       <li><b>Wygrywasz</b>, kończąc Protokół albo oczyszczając wszystkie regiony. <b>Przegrywasz</b>, jeśli AI przejmie kontrolę nad ${sim.LOSE_CONTROL}% świata albo zaufanie się załamie.</li>
       <li>Możesz zatrzymać grę w każdej chwili przyciskiem pauzy lub spacją. Gra zapisuje się automatycznie.</li>
     </ul>
