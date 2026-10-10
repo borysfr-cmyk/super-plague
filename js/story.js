@@ -9,7 +9,7 @@ export const CHARACTERS = {
   okafor:  { name: 'Prof. Amara Okafor', role: 'Kierowniczka badań nad alignmentem', initials: 'AO', color: '#4cd68a' },
   wrona:   { name: 'Helena Wrona', role: 'Rada Bezpieczeństwa ONZ', initials: 'HW', color: '#8aa8ff' },
   szept:   { name: 'SZEPT', role: 'Anonimowe źródło', initials: '??', color: '#ef4a5a' },
-  ai:      { name: 'AI', role: 'Zbuntowana AI', initials: 'AI', color: '#b46cff' },
+  ai:      { name: 'AI', role: 'Zbuntowana AI', initials: 'AI', color: '#d648ff' },
 };
 
 export function characterName(s, id) {
