@@ -5,6 +5,8 @@ import * as saves from './save.js';
 import * as cloud from './cloud.js';
 import * as story from './story.js';
 import { COAST } from './geo.js';
+import { portrait } from './portraits.js';
+import { patch, CAT_COLORS, ACTION_COLORS } from './icons.js';
 
 const MS_PER_DAY = { 1: 2500, 2: 1250, 3: 600 };
 const AUTOSAVE_EVERY = 10; // days
@@ -68,6 +70,8 @@ function setPaused(p) {
   $('#btn-pause').classList.toggle('paused', p);
   $('#btn-pause').innerHTML = p ? '&#9654;' : '&#10074;&#10074;';
   $('#btn-pause').setAttribute('aria-label', p ? 'Wznów' : 'Pauza');
+  // freeze the AI packets on the map while paused
+  if (p) $('#map').pauseAnimations(); else $('#map').unpauseAnimations();
   if (p && state && !state.over) autosave();
 }
 
@@ -133,7 +137,6 @@ function svgEl(tag, attrs = {}, parent) {
 function buildMap() {
   const svg = $('#map');
   svg.replaceChildren();
-  // faint grid
   svgEl('path', { class: 'coast', d: COAST }, svg);
 
   const links = svgEl('g', {}, svg);
@@ -141,11 +144,15 @@ function buildMap() {
     const A = REGIONS.find(r => r.id === a), B = REGIONS.find(r => r.id === b);
     svgEl('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: 'link', 'data-a': a, 'data-b': b }, links);
   }
+  svgEl('g', { class: 'flows' }, svg);
+  flowKeys.clear();
   const nodes = svgEl('g', {}, svg);
   for (const R of REGIONS) {
     const r = nodeR(R);
     const g = svgEl('g', { class: 'node', 'data-id': R.id, transform: `translate(${R.x},${R.y})` }, nodes);
     svgEl('circle', { class: 'halo', r: r + 14 }, g);
+    svgEl('circle', { class: 'shield', r: r + 20 }, g);
+    svgEl('circle', { class: 'hazard', r: r + 6 }, g);
     svgEl('circle', { class: 'base', r }, g);
     svgEl('circle', { class: 'sec', r: r + 4 }, g);
     const circ = 2 * Math.PI * (r + 9);
@@ -154,7 +161,36 @@ function buildMap() {
     svgEl('text', { class: 'val', y: 5 }, g).textContent = '';
     svgEl('text', { class: 'name', y: r + 30 }, g).textContent = R.short;
     svgEl('text', { class: 'tag', y: -r - 14 }, g).textContent = '';
+    const warn = svgEl('g', { class: 'warn', transform: `translate(${r + 10},${-r * 0.55})` }, g);
+    svgEl('path', { d: 'M0,-11 L10,7 L-10,7 Z' }, warn);
+    svgEl('text', { y: 5 }, warn).textContent = '!';
     g.addEventListener('click', () => selectRegion(R.id));
+  }
+}
+
+// Alarm effects on hot links: a glowing line plus packets running from the more infected end.
+// Rebuilt only when a link's direction or hot state changes, so the packets don't restart every day.
+const flowKeys = new Map();
+function renderFlows(visible) {
+  const layer = $('#map .flows');
+  for (const [a0, b0] of LINKS) {
+    const A = state.regions[a0], B = state.regions[b0];
+    const hot = visible && !A.isolated && !B.isolated && Math.max(A.inf, B.inf) > 30 && Math.min(A.inf, B.inf) > 0;
+    const [a, b] = A.inf >= B.inf ? [a0, b0] : [b0, a0];
+    const id = `${a0}-${b0}`, key = hot ? `${a}>${b}` : '';
+    if (flowKeys.get(id) === key) continue;
+    flowKeys.set(id, key);
+    layer.querySelector(`[data-link="${id}"]`)?.remove();
+    if (!hot) continue;
+    const P = REGIONS.find(r => r.id === a), Q = REGIONS.find(r => r.id === b);
+    const g = svgEl('g', { 'data-link': id }, layer);
+    svgEl('line', { class: 'glow', x1: P.x, y1: P.y, x2: Q.x, y2: Q.y }, g);
+    const len = Math.hypot(Q.x - P.x, Q.y - P.y), dur = len / 90;
+    for (let i = 0; i < 2; i++) {
+      const pkt = svgEl('circle', { class: 'pkt', r: 3.5 }, g);
+      svgEl('animateMotion', { path: `M${P.x},${P.y} L${Q.x},${Q.y}`, dur: `${dur.toFixed(2)}s`,
+        begin: `${(i * dur / 2).toFixed(2)}s`, repeatCount: 'indefinite' }, pkt);
+    }
   }
 }
 
@@ -178,6 +214,8 @@ function renderMap() {
     g.classList.toggle('selected', selected === R.id);
     g.classList.toggle('outage', r.outage > 0);
     g.classList.toggle('anomaly', anomaly);
+    g.classList.toggle('isolated', r.isolated);
+    g.dataset.lvl = !visible ? 0 : r.inf >= 70 ? 3 : r.inf >= 40 ? 2 : r.inf > 0 ? 1 : 0;
     g.querySelector('.base').setAttribute('fill', visible ? infColor(r.inf) : (anomaly ? '#5a4a2a' : '#2a3326'));
     const ctrl = g.querySelector('.ctrl');
     const circ = Number(ctrl.dataset.circ);
@@ -197,6 +235,9 @@ function renderMap() {
     l.classList.toggle('cut', a.isolated || b.isolated);
     l.classList.toggle('hot', visible && Math.max(a.inf, b.inf) > 30 && Math.min(a.inf, b.inf) > 0);
   });
+  renderFlows(visible);
+  // the map edge glows violet as the AI nears the 66% control needed to win
+  $('#map-wrap').style.setProperty('--threat', state.detected ? Math.min(1, sim.globalControl(state) / sim.LOSE_CONTROL).toFixed(2) : 0);
 }
 
 function selectRegion(id) {
@@ -265,7 +306,7 @@ function regionPanel() {
     const t = ACTION_TEXT[a];
     const name = a === 'isolate' && r.isolated ? 'Przywróć połączenia' : t.name;
     const desc = a === 'isolate' && r.isolated ? 'Przywróć połączenia regionu ze światem. Fundusze i zaufanie wracają do normy.' : t.desc;
-    html += `<button class="card" data-action="region" data-arg="${a}" ${info.enabled ? '' : 'disabled'}>
+    html += `<button class="card" data-action="region" data-arg="${a}" ${info.enabled ? '' : 'disabled'}>${patch(a, ACTION_COLORS[a])}
       <div class="row"><span class="name">${name}</span><span class="cost">${info.cost ? '$' + info.cost : 'Za darmo'}</span></div>
       <div class="desc">${desc}</div>${info.enabled ? '' : `<div class="why">${info.reason}</div>`}</button>`;
   }
@@ -275,7 +316,7 @@ function regionPanel() {
 function safeguardsPanel() {
   const c = sim.campaignInfo(state);
   let html = `<p class="panel-title">Programy globalne</p><div class="panel-sub">Działają na całym świecie. Fundusze: $${fmt(state.funds)}</div>
-    <button class="card" data-action="campaign" ${c.enabled ? '' : 'disabled'}>
+    <button class="card" data-action="campaign" ${c.enabled ? '' : 'disabled'}>${patch('campaign', ACTION_COLORS.campaign)}
       <div class="row"><span class="name">Kampania informacyjna</span><span class="cost">$${c.cost}</span></div>
       <div class="desc">Zmobilizuj opinię publiczną. Zaufanie +${sim.CAMPAIGN.trust}. Można powtarzać.</div>${c.enabled ? '' : `<div class="why">${c.reason}</div>`}</button>`;
   for (const cat of UPGRADE_CATS) {
@@ -283,7 +324,7 @@ function safeguardsPanel() {
     for (const u of UPGRADES.filter(x => x.cat === cat)) {
       const st = sim.upgradeStatus(state, u);
       const owned = st.state === 'owned';
-      html += `<button class="card ${owned ? 'owned' : ''}" data-action="upgrade" data-arg="${u.id}" ${st.state === 'available' ? '' : 'disabled'}>
+      html += `<button class="card ${owned ? 'owned' : ''}" data-action="upgrade" data-arg="${u.id}" ${st.state === 'available' ? '' : 'disabled'}>${patch(u.id, CAT_COLORS[u.cat])}
         <div class="row"><span class="name">${u.name}</span><span class="cost">${owned ? 'Aktywne' : '$' + u.cost}</span></div>
         <div class="desc">${u.desc}</div>${st.state === 'locked' ? `<div class="why">${st.reason}</div>` : ''}</button>`;
     }
@@ -314,14 +355,14 @@ function threatPanel() {
   if (!state.ai.traits.length) html += '<p class="hint">Na razie brak.</p>';
   for (const id of [...state.ai.traits].reverse()) {
     const t = sim.TRAIT_BY_ID[id];
-    html += `<div class="trait"><div class="name">${t.name}</div><div class="desc">${t.desc}</div></div>`;
+    html += `<div class="trait">${patch(id, 'var(--ai)')}<div class="name">${t.name}</div><div class="desc">${t.desc}</div></div>`;
   }
   return html;
 }
 
 function avatar(id) {
   const c = story.CHARACTERS[id];
-  return `<span class="avatar" style="--c:${c.color}">${c.initials}</span>`;
+  return `<span class="avatar" style="--c:${c.color}">${portrait(id, c.color, c.initials)}</span>`;
 }
 
 function missionCard(m) {
@@ -431,17 +472,21 @@ function messageToast(n) {
   const el = document.createElement('button');
   el.className = 'toast msg';
   el.style.setProperty('--c', c.color);
+  el.innerHTML = avatar(n.from);
+  const body = document.createElement('div');
+  body.className = 'toast-body';
   const who = document.createElement('b');
   who.textContent = story.characterName(state, n.from);
   const text = document.createElement('span');
   text.textContent = n.text.length > 110 ? n.text.slice(0, 107).trimEnd() + '…' : n.text;
-  el.append(who, text);
+  body.append(who, text);
   if (n.mission) {
     const tag = document.createElement('small');
     tag.className = n.kind;
     tag.textContent = messageTag(n);
-    el.append(tag);
+    body.append(tag);
   }
+  el.append(body);
   el.onclick = () => { el.remove(); setTab('hq'); };
   $('#toasts').appendChild(el);
   while ($('#toasts').children.length > 2) $('#toasts').firstChild.remove();
@@ -687,6 +732,22 @@ $('#map').addEventListener('click', e => { if (!e.target.closest('.node')) { sel
 
 $('#btn-new').addEventListener('click', showNewGame);
 $('#btn-import').addEventListener('click', showImport);
+// Title screen: a radar with the world map and violet AI hotspots behind the logo
+function buildTitleRadar() {
+  const svg = $('#title-map');
+  const rings = svgEl('g', { class: 'rings', transform: 'translate(500,500)' }, svg);
+  for (let r = 80; r <= 480; r += 80) svgEl('circle', { r }, rings);
+  svgEl('path', { d: 'M-500,0 L500,0 M0,-500 L0,500' }, rings);
+  const world = svgEl('g', { transform: 'translate(500,500) scale(.62) translate(-545,-250)' }, svg);
+  svgEl('path', { class: 'coast', d: COAST }, world);
+  ['na', 'eu', 'ea', 'sas'].forEach((id, i) => {
+    const R = REGIONS.find(r => r.id === id);
+    svgEl('circle', { class: 'blip', cx: R.x, cy: R.y, r: 9 }, world);
+    svgEl('circle', { class: 'blip-ring', cx: R.x, cy: R.y, r: 22, style: `animation-delay:${i * 0.6}s` }, world);
+  });
+}
+buildTitleRadar();
+
 $('#btn-howto').addEventListener('click', () => showHowTo());
 $('#btn-cloud').addEventListener('click', () => showCloud());
 $('#btn-continue').addEventListener('click', async () => {

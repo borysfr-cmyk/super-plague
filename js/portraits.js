@@ -1,0 +1,18 @@
+// Character portraits for the Sztab tab and message toasts: halftone "dossier photos".
+// Busts are drawn in a 64x64 box; the halftone patterns #pt-skin and #pt-cloth live in index.html.
+export const BUSTS = {
+  marczak: '<path d="M4,64 C6,49 19,44 32,44 C45,44 58,49 60,64 Z" fill="url(#pt-cloth)"/><path d="M26,44 L32,52 L38,44 Z" fill="#2a2e26"/><rect x="27" y="34" width="10" height="11" fill="url(#pt-skin)"/><ellipse cx="32" cy="27" rx="10" ry="12" fill="url(#pt-skin)"/><path d="M20,30 C19,14 45,12 44,30 L44,38 L40,38 L40,24 C36,22 28,22 24,24 L24,38 L20,38 Z" fill="#5d6253"/><g fill="none" stroke="#2a2e26" stroke-width="1.6"><circle cx="27.5" cy="28" r="3.2"/><circle cx="36.5" cy="28" r="3.2"/><path d="M30.7,28 L33.3,28"/></g>',
+  rydel: '<path d="M4,64 C6,49 19,44 32,44 C45,44 58,49 60,64 Z" fill="url(#pt-cloth)"/><path d="M8,52 L18,49 L18,53 L8,56 Z M56,52 L46,49 L46,53 L56,56 Z" fill="#2a2e26"/><path d="M27,44 L32,50 L37,44 Z" fill="#2a2e26"/><rect x="27" y="34" width="10" height="11" fill="url(#pt-skin)"/><ellipse cx="32" cy="29" rx="10" ry="11.5" fill="url(#pt-skin)"/><path d="M19,22 C19,12 45,12 45,22 L45,24 L19,24 Z" fill="#5d6253"/><path d="M18,24 L46,24 L44,27 L20,27 Z" fill="#2a2e26"/><circle cx="32" cy="18" r="2.4" fill="url(#pt-cloth)"/>',
+  okafor: '<circle cx="22" cy="22" r="8" fill="#5d6253"/><circle cx="32" cy="15" r="9" fill="#5d6253"/><circle cx="42" cy="22" r="8" fill="#5d6253"/><circle cx="19" cy="32" r="7" fill="#5d6253"/><circle cx="45" cy="32" r="7" fill="#5d6253"/><circle cx="26" cy="16" r="7" fill="#5d6253"/><circle cx="38" cy="16" r="7" fill="#5d6253"/><path d="M4,64 C6,49 19,44 32,44 C45,44 58,49 60,64 Z" fill="url(#pt-cloth)"/><rect x="27" y="34" width="10" height="11" fill="url(#pt-skin)"/><ellipse cx="32" cy="29" rx="10" ry="12" fill="url(#pt-skin)"/><path d="M22,26 C24,18 40,18 42,26 C38,22 26,22 22,26 Z" fill="#5d6253"/><circle cx="22.5" cy="33" r="1.6" fill="url(#pt-cloth)"/><circle cx="41.5" cy="33" r="1.6" fill="url(#pt-cloth)"/>',
+  wrona: '<path d="M4,64 C6,49 19,44 32,44 C45,44 58,49 60,64 Z" fill="url(#pt-cloth)"/><path d="M24,44 L32,60 L40,44 L36,44 L32,52 L28,44 Z" fill="#2a2e26"/><rect x="27" y="34" width="10" height="11" fill="url(#pt-skin)"/><ellipse cx="32" cy="28" rx="10" ry="12" fill="url(#pt-skin)"/><circle cx="32" cy="12" r="6" fill="#5d6253"/><path d="M21,30 C20,15 44,15 43,30 C40,22 24,22 21,30 Z" fill="#5d6253"/>',
+  szept: '<path d="M4,64 C6,48 14,42 20,40 C14,30 16,8 32,8 C48,8 50,30 44,40 C50,42 58,48 60,64 Z" fill="url(#pt-cloth)"/><ellipse cx="32" cy="28" rx="9" ry="11" fill="#050505"/><circle cx="28.5" cy="28" r="1.3" fill="url(#pt-cloth)"/><circle cx="35.5" cy="28" r="1.3" fill="url(#pt-cloth)"/>',
+  ai: '<path d="M32,8 L50,18 L50,40 L32,50 L14,40 L14,18 Z" fill="none" stroke="url(#pt-cloth)" stroke-width="2.5"/><path d="M32,14 L45,21 L45,37 L32,44 L19,37 L19,21 Z" fill="#2a2e26"/><circle cx="32" cy="29" r="6" fill="url(#pt-cloth)"/><circle cx="32" cy="29" r="2.5" fill="#fff"/><path d="M14,40 L6,46 M50,40 L58,46 M32,50 L32,62 M24,46 L18,62 M40,46 L46,62" stroke="url(#pt-cloth)" stroke-width="2"/>',
+};
+
+export function portrait(id, color, label) {
+  return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="#1b1f18"/>`
+    + `<g transform="translate(4,6) scale(.875)">${BUSTS[id]}</g>`
+    + `<rect width="64" height="64" fill="none" stroke="${color}" stroke-width="4"/>`
+    + `<rect y="54" width="64" height="10" fill="${color}"/>`
+    + `<text x="32" y="62" font-size="8" font-weight="700" text-anchor="middle" fill="#111" font-family="JetBrains Mono, monospace">${label}</text></svg>`;
+}

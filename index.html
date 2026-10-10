@@ -23,6 +23,7 @@
   </div>
 
   <section id="title" class="screen active">
+    <div class="title-radar" aria-hidden="true"><div class="title-sweep"></div><svg id="title-map" viewBox="0 0 1000 1000"></svg></div>
     <div class="title-inner">
       <div class="title-glitch" data-text="SUPER PLAGUE">SUPER PLAGUE</div>
       <p class="tagline">W światowych sieciach budzi się zbuntowana AI.<br>Kierujesz jedyną agencją, która może ją powstrzymać.</p>
@@ -57,6 +58,7 @@
     <main id="board">
       <div id="map-wrap">
         <svg id="map" viewBox="110 30 870 440" preserveAspectRatio="xMidYMid meet" aria-label="Mapa świata"></svg>
+        <div id="threat-vignette"></div>
         <div id="paused-badge">PAUZA</div>
       </div>
       <aside id="panel">
@@ -79,6 +81,11 @@
     </div>
   </div>
   <div id="toasts"></div>
+  <!-- halftone patterns shared by the character portraits (js/portraits.js) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <pattern id="pt-skin" width="3" height="3" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.25" fill="#eef0e4"/></pattern>
+    <pattern id="pt-cloth" width="3" height="3" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".8" fill="#9aa08c"/></pattern>
+  </svg>
 
   <script type="module" src="js/main.js"></script>
 </body>

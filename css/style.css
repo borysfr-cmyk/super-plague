@@ -40,9 +40,20 @@ button:disabled { cursor: not-allowed; }
   background: repeating-linear-gradient(0deg, rgba(var(--accent-rgb), .04) 0 1px, transparent 1px 40px),
     repeating-linear-gradient(90deg, rgba(var(--accent-rgb), .04) 0 1px, transparent 1px 40px),
     radial-gradient(ellipse at 50% 40%, #151d12 0%, var(--bg) 70%); }
-.title-inner { max-width: 640px; padding: 16px; }
+.title-inner { max-width: 820px; padding: 16px; position: relative; z-index: 1; }
+#title { overflow: hidden; }
+.title-radar { position: absolute; inset: 0; pointer-events: none; }
+.title-radar svg { position: absolute; left: 50%; top: 50%; width: 140vmax; height: 140vmax; transform: translate(-50%, -50%); }
+.title-radar .rings { fill: none; stroke: rgba(var(--accent-rgb), .14); }
+.title-radar .coast { fill: rgba(var(--accent-rgb), .04); stroke: rgba(111, 128, 72, .55); stroke-width: 1.5; }
+.title-radar .blip { fill: var(--ai); opacity: .9; }
+.title-radar .blip-ring { fill: none; stroke: var(--ai); opacity: 0; animation: blip 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes blip { 0% { opacity: .8; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.4); } }
+.title-sweep { position: absolute; left: 50%; top: 50%; width: 200vmax; height: 200vmax; margin: -100vmax 0 0 -100vmax;
+  background: conic-gradient(from 0deg, rgba(var(--accent-rgb), .22), transparent 16%); animation: sweep 9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .title-sweep, .title-radar .blip-ring { animation: none; } }
 .title-glitch { font-size: clamp(36px, 9vw, 76px); font-weight: 700; letter-spacing: 0.2em; position: relative;
-  color: var(--text); text-shadow: 0 0 18px rgba(var(--accent-rgb), 0.35); }
+  color: var(--text); text-shadow: 0 0 22px rgba(var(--accent-rgb), 0.45); }
 .title-glitch::after { content: attr(data-text); position: absolute; inset: 0; color: var(--ai);
   clip-path: inset(0 0 60% 0); transform: translate(2px, -1px); opacity: 0.5; animation: glitch 4s infinite steps(1); }
 @keyframes glitch { 0%, 92% { opacity: 0; } 93% { opacity: 0.6; transform: translate(3px, -2px); } 96% { opacity: 0.4; transform: translate(-3px, 1px); } }
@@ -138,6 +149,28 @@ button:disabled { cursor: not-allowed; }
 .node .val { font-size: 17px; font-family: var(--mono); font-weight: 700; paint-order: stroke; stroke: rgba(0,0,0,0.5); stroke-width: 3px; }
 .node .tag { font-size: 13px; fill: var(--warn); letter-spacing: 0.08em; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
 .node.outage .base { opacity: 0.35; }
+/* alarm effects: hot links glow and carry AI packets, regions over 70% flash a warning,
+   blackouts get a hazard ring, isolated regions a shield, and the map edge glows with global AI control */
+.flows { pointer-events: none; }
+.flows .glow { stroke: var(--ai); stroke-width: 7; opacity: 0.25; animation: alarm-pulse 1.2s ease-in-out infinite; }
+.flows .pkt { fill: #e9b8ff; }
+@keyframes alarm-pulse { 50% { opacity: 0.6; } }
+.node[data-lvl="3"] .base { animation: alarm-hot 1s ease-in-out infinite; }
+@keyframes alarm-hot { 50% { filter: drop-shadow(0 0 14px var(--bad)) brightness(1.25); } }
+.node .warn { display: none; fill: var(--bad); pointer-events: none; animation: alarm-blink 1s steps(1) infinite; }
+.node[data-lvl="3"] .warn { display: inline; }
+.node .warn text { fill: #111; font: 700 13px var(--font); text-anchor: middle; paint-order: normal; stroke: none; }
+@keyframes alarm-blink { 50% { opacity: 0.2; } }
+.node .hazard, .node .shield { fill: none; display: none; pointer-events: none; }
+.node.outage .hazard { display: inline; stroke: var(--warn); stroke-width: 5; stroke-dasharray: 6 6;
+  animation: spin 4s linear infinite; transform-box: fill-box; transform-origin: center; }
+.node.isolated .shield { display: inline; stroke: var(--bad); stroke-width: 2.5; stroke-dasharray: 2 4; }
+#threat-vignette { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: calc(var(--threat, 0) * 0.9);
+  box-shadow: inset 0 0 70px rgba(214, 72, 255, 0.45); animation: alarm-vig 2s ease-in-out infinite; }
+@keyframes alarm-vig { 50% { box-shadow: inset 0 0 90px rgba(214, 72, 255, 0.7); } }
+@media (prefers-reduced-motion: reduce) {
+  .flows .glow, .node[data-lvl="3"] .base, .node .warn, .node.outage .hazard, #threat-vignette { animation: none; }
+}
 .node.anomaly .base { animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { stroke: var(--warn); } }
 
@@ -177,6 +210,14 @@ button.card:disabled { opacity: 0.55; }
 .card.owned { border-color: #1f6b47; background: #112418; }
 .card.owned .cost { color: var(--good); }
 .upgrades { display: flex; flex-direction: column; gap: 6px; }
+/* hexagonal icon patches on program, action and AI trait cards */
+.card:has(.patch), .trait { display: grid; grid-template-columns: 38px 1fr; column-gap: 9px; align-items: start; }
+.card:has(.patch) > :not(.patch), .trait > :not(.patch) { grid-column: 2; }
+.patch { grid-row: 1 / span 3; position: relative; width: 38px; height: 42px; padding: 10px 9px; color: var(--ic); background: var(--ic);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.patch::before { content: ""; position: absolute; inset: 2px; background: #151c12; clip-path: inherit; }
+.patch svg { position: relative; display: block; width: 100%; height: 100%; }
+@media (max-width: 700px) { .actions { grid-template-columns: 1fr; } }
 
 .trait { border-left: 3px solid var(--ai); padding: 4px 8px; margin: 6px 0; background: #1d1426; border-radius: 0 var(--radius) var(--radius) 0; }
 .trait .name { font-weight: 600; font-size: 13px; color: #e2b0ff; }
@@ -263,9 +304,8 @@ textarea.code { width: 100%; height: 90px; background: var(--bg); color: var(--t
 }
 
 /* ---------- HQ: tasks and messages ---------- */
-.avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--c); border: 1.5px solid var(--c);
-  background: color-mix(in srgb, var(--c) 14%, var(--panel)); }
+.avatar { flex: none; width: 38px; height: 38px; border-radius: var(--radius); overflow: hidden; display: block; }
+.avatar svg { display: block; width: 100%; height: 100%; }
 .mission { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--good); border-radius: var(--radius);
   padding: 8px 10px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 5px; }
 .mission .row { display: flex; align-items: center; gap: 8px; }
@@ -296,8 +336,9 @@ textarea.code { width: 100%; height: 90px; background: var(--bg); color: var(--t
 .msg .tag.done { color: var(--good); }
 .msg .tag.failed { color: var(--bad); }
 
-.toast.msg { pointer-events: auto; display: flex; flex-direction: column; gap: 2px; text-align: left; color: var(--text);
+.toast.msg { pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; text-align: left; color: var(--text);
   border-left-color: var(--c); cursor: pointer; }
+.toast-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .toast.msg b { color: var(--c); font-size: 12px; }
 .toast.msg small { color: var(--warn); font-size: 11px; }
 .toast.msg small.done { color: var(--good); }
@@ -305,4 +346,5 @@ textarea.code { width: 100%; height: 90px; background: var(--bg); color: var(--t
 @media (max-height: 500px) {
   .toast.msg span { font-size: 11px; line-height: 1.3; }
   .toast.msg b { font-size: 11px; }
+  .toast .avatar { width: 32px; height: 32px; }
 }
