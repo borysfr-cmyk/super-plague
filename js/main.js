@@ -2,6 +2,7 @@
 import { REGIONS, LINKS, UPGRADES, UPGRADE_CATS, DIFFICULTIES } from './data.js';
 import * as sim from './sim.js';
 import * as saves from './save.js';
+import * as cloud from './cloud.js';
 
 const MS_PER_DAY = { 1: 2500, 2: 1250, 3: 600 };
 const AUTOSAVE_EVERY = 10; // days
@@ -449,10 +450,11 @@ function showGameOver() {
 function showMenu() {
   setPaused(true);
   openModal(`<h2>Paused</h2>
-    <p class="note">Your game saves automatically on this device. Cloud save is coming soon. Until then, use a save code to move a game to another device.</p>
+    <p class="note">${cloudStatusText()}</p>
     <div class="modal-buttons col">
       <button class="btn primary" data-resume>Resume</button>
       <button class="btn" data-save>Save Now</button>
+      ${cloud.isConfigured() ? '<button class="btn" data-cloud>Cloud Save</button>' : ''}
       <button class="btn" data-code>Get Save Code</button>
       <button class="btn" data-howto>How to Play</button>
       <button class="btn" data-fs>Toggle Fullscreen</button>
@@ -461,9 +463,16 @@ function showMenu() {
     onOpen: el => {
       el.querySelector('[data-resume]').onclick = () => { closeModal(); setPaused(false); };
       el.querySelector('[data-save]').onclick = async () => {
-        await autosave();
-        el.querySelector('[data-msg]').textContent = saves.local.isAvailable() ? 'Saved on this device.' : 'Could not save: storage is blocked in this browser.';
+        lastSavedDay = state.day;
+        const res = await saves.saveGame(state);
+        const parts = [];
+        if (res['This device']) parts.push('on this device');
+        if (res.Cloud) parts.push('to the cloud');
+        el.querySelector('[data-msg]').textContent = parts.length ? `Saved ${parts.join(' and ')}.`
+          : 'Could not save. Storage is blocked in this browser; use a save code instead.';
+        if (res.Cloud === false) el.querySelector('[data-msg]').textContent += ' Cloud save failed; check your connection.';
       };
+      el.querySelector('[data-cloud]')?.addEventListener('click', () => showCloud(showMenu));
       el.querySelector('[data-code]').onclick = showExport;
       el.querySelector('[data-howto]').onclick = () => showHowTo(showMenu);
       el.querySelector('[data-fs]').onclick = () => {
@@ -527,6 +536,37 @@ function showHowTo(back) {
   });
 }
 
+function cloudStatusText() {
+  if (!cloud.isConfigured()) return 'Your game saves automatically on this device. Use a save code to move a game to another device.';
+  const u = cloud.currentUser();
+  if (u) return `Saving automatically on this device and to the cloud as ${esc(u.displayName || u.email || 'your Google account')}.`;
+  return 'Saving automatically on this device. Sign in under Cloud Save to keep your game in the cloud and continue on any device.';
+}
+
+function showCloud(back) {
+  const u = cloud.currentUser();
+  openModal(`<h2>Cloud Save</h2>
+    <p>${u ? `Signed in as <b>${esc(u.displayName || u.email)}</b>. Your game is saved to the cloud automatically and you can continue it on any device where you sign in.`
+      : 'Sign in with Google to save your game in the cloud and continue it on any device.'}</p>
+    <div class="modal-buttons">
+      ${u ? '<button class="btn" data-out>Sign Out</button>' : '<button class="btn primary" data-in>Sign in with Google</button>'}
+      <button class="btn" data-back>Back</button>
+    </div><p class="error" data-msg></p>`, {
+    onOpen: el => {
+      el.querySelector('[data-back]').onclick = () => (back ? back() : closeModal());
+      el.querySelector('[data-in]')?.addEventListener('click', async () => {
+        el.querySelector('[data-msg]').textContent = 'Signing in...';
+        try {
+          await cloud.signIn();
+          if (state && !state.over) await autosave();
+          showCloud(back);
+        } catch (e) { el.querySelector('[data-msg]').textContent = `Sign-in failed: ${e.message}`; }
+      });
+      el.querySelector('[data-out]')?.addEventListener('click', async () => { await cloud.signOut(); showCloud(back); });
+    },
+  });
+}
+
 function toTitle() {
   setPaused(true);
   state = null;
@@ -555,6 +595,7 @@ $('#map').addEventListener('click', e => { if (!e.target.closest('.node')) { sel
 $('#btn-new').addEventListener('click', showNewGame);
 $('#btn-import').addEventListener('click', showImport);
 $('#btn-howto').addEventListener('click', () => showHowTo());
+$('#btn-cloud').addEventListener('click', () => showCloud());
 $('#btn-continue').addEventListener('click', async () => {
   const rec = await saves.loadGame();
   if (rec) startGame(rec.state);
@@ -578,3 +619,8 @@ if (new URLSearchParams(location.search).has('debug')) {
 
 refreshTitle();
 requestAnimationFrame(frame);
+if (cloud.isConfigured()) {
+  $('#btn-cloud').hidden = false;
+  cloud.onUserChange(() => { if (!state) refreshTitle(); });
+  cloud.initCloud();
+}

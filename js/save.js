@@ -1,8 +1,9 @@
 // Save system. Every storage backend implements the same small interface:
-//   name, isAvailable(), save(slot, state), load(slot), remove(slot)
-// LocalSaveProvider works today. CloudSaveProvider is the hook for cloud save
-// (e.g. Firebase) and stays disabled until it is configured.
+//   name, isAvailable(), save(slot, { savedAt, state }), load(slot), remove(slot)
+// LocalSaveProvider always works. CloudSaveProvider uses Firebase (js/cloud.js)
+// once js/firebase-config.js holds a config and the player has signed in.
 import { SAVE_VERSION } from './sim.js';
+import * as cloudApi from './cloud.js';
 
 const PREFIX = 'superplague.save.';
 const CODE_PREFIX = 'SP1:';
@@ -16,8 +17,8 @@ export class LocalSaveProvider {
       return true;
     } catch { return false; }
   }
-  async save(slot, state) {
-    localStorage.setItem(PREFIX + slot, JSON.stringify({ savedAt: Date.now(), state }));
+  async save(slot, record) {
+    localStorage.setItem(PREFIX + slot, JSON.stringify(record));
   }
   async load(slot) {
     try {
@@ -32,10 +33,10 @@ export class LocalSaveProvider {
 
 export class CloudSaveProvider {
   name = 'Cloud';
-  isAvailable() { return false; } // not configured yet
-  async save() { throw new Error('Cloud save is not configured yet.'); }
-  async load() { return null; }
-  async remove() {}
+  isAvailable() { return cloudApi.isReady() && !!cloudApi.currentUser(); }
+  save(slot, record) { return cloudApi.cloudSave(slot, record); }
+  load(slot) { return cloudApi.cloudLoad(slot); }
+  remove(slot) { return cloudApi.cloudRemove(slot); }
 }
 
 export const local = new LocalSaveProvider();
@@ -43,9 +44,10 @@ export const cloud = new CloudSaveProvider();
 
 export async function saveGame(state, slot = 'auto') {
   const results = {};
+  const record = { savedAt: Date.now(), state };
   for (const p of [local, cloud]) {
     if (!p.isAvailable()) continue;
-    try { await p.save(slot, state); results[p.name] = true; } catch { results[p.name] = false; }
+    try { await p.save(slot, record); results[p.name] = true; } catch (e) { console.warn(e); results[p.name] = false; }
   }
   return results;
 }
@@ -62,7 +64,7 @@ export async function loadGame(slot = 'auto') {
 }
 
 export async function deleteSave(slot = 'auto') {
-  for (const p of [local, cloud]) if (p.isAvailable()) await p.remove(slot);
+  for (const p of [local, cloud]) if (p.isAvailable()) await p.remove(slot).catch(() => {});
 }
 
 // Save codes let a player move a game between devices by copy & paste.
